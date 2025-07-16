@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
-import { Settings, LogOut, Sun, Moon } from "lucide-react";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Settings, LogOut, Sun, Moon, Menu } from "lucide-react";
 import cooksyLogo from "@/assets/cooksy-logo.png";
 import RecipeDetailModal from "@/components/RecipeDetailModal";
+import { AppSidebar } from "@/components/AppSidebar";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -195,176 +197,210 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-warm">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4 bg-background/95 backdrop-blur-sm border-b border-border/50">
-        {/* Logo and Name */}
-        <div className="flex items-center space-x-3">
-          <img 
-            src={cooksyLogo} 
-            alt="Cooksy Logo" 
-            className="h-10 w-10 rounded-lg shadow-card"
-          />
-          <h1 className="text-xl font-bold text-foreground bg-gradient-hero bg-clip-text text-transparent">
-            Cooksy
-          </h1>
-        </div>
-
-        {/* Account Section */}
-        <div className="flex items-center space-x-4">
-          {/* Theme Toggle */}
-          <div className="flex items-center space-x-2">
-            <Sun className="h-4 w-4" />
-            <Switch 
-              checked={isDarkMode}
-              onCheckedChange={toggleTheme}
-            />
-            <Moon className="h-4 w-4" />
-          </div>
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src="" alt="User" />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    JD
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 bg-background border-border/50" align="end" forceMount>
-              <div className="flex flex-col space-y-1 p-2">
-                <p className="text-sm font-medium leading-none">john.doe@gmail.com</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  Welcome back!
-                </p>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="hover:bg-accent">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className="hover:bg-accent text-destructive focus:text-destructive"
-                onClick={handleLogout}
+    <SidebarProvider>
+      <div className="min-h-screen w-full bg-gradient-warm">
+        {/* Fixed Header */}
+        <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-background/95 backdrop-blur-md border-b border-border/50">
+          {/* Left Section with Sidebar Toggle and Logo */}
+          <div className="flex items-center space-x-4">
+            <SidebarTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hover:bg-accent/50 hover:text-primary transition-all duration-200"
               >
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Filter Tabs */}
-        <div className="flex justify-center mb-12">
-          <div className="flex bg-background/50 backdrop-blur-sm rounded-lg p-1 border border-border/50 shadow-elegant">
-            <Button
-              variant={activeFilter === "recipes" ? "hero" : "ghost"}
-              className={`px-8 py-3 rounded-md transition-all duration-300 ${
-                activeFilter === "recipes" 
-                  ? "animate-scale-in" 
-                  : "hover:bg-accent/50"
-              }`}
-              onClick={() => setActiveFilter("recipes")}
-            >
-              Recipes
-            </Button>
-            <Button
-              variant={activeFilter === "beverages" ? "hero" : "ghost"}
-              className={`px-8 py-3 rounded-md transition-all duration-300 ${
-                activeFilter === "beverages" 
-                  ? "animate-scale-in" 
-                  : "hover:bg-accent/50"
-              }`}
-              onClick={() => setActiveFilter("beverages")}
-            >
-              Beverages
-            </Button>
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SidebarTrigger>
+            <div className="flex items-center space-x-3">
+              <img 
+                src={cooksyLogo} 
+                alt="Cooksy Logo" 
+                className="h-10 w-10 rounded-lg shadow-card"
+              />
+              <h1 className="text-xl font-bold text-foreground bg-gradient-hero bg-clip-text text-transparent">
+                Cooksy
+              </h1>
+            </div>
           </div>
-        </div>
 
-        {/* Content Grid */}
-        <div className="max-w-4xl mx-auto">
-          {activeFilter === "recipes" && (
-            <div className="animate-fade-in">
-              <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-hero bg-clip-text text-transparent">
-                Featured Recipes
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {recipes.map((recipe) => (
-                  <div
-                    key={recipe.id}
-                    className="group bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-md rounded-2xl overflow-hidden shadow-elegant border border-border/30 hover:shadow-glow transition-all duration-500 hover:scale-[1.02] cursor-pointer"
-                    onClick={() => handleRecipeClick(recipe)}
+          {/* Right Section - Account */}
+          <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <div className="flex items-center space-x-2">
+              <Sun className="h-4 w-4 text-muted-foreground" />
+              <Switch 
+                checked={isDarkMode}
+                onCheckedChange={toggleTheme}
+              />
+              <Moon className="h-4 w-4 text-muted-foreground" />
+            </div>
+
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full hover:shadow-glow transition-all duration-300">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src="" alt="User" />
+                    <AvatarFallback className="bg-gradient-hero text-primary-foreground font-semibold">
+                      JD
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-background/95 backdrop-blur-md border-border/50 shadow-glow" align="end" forceMount>
+                <div className="flex flex-col space-y-1 p-2">
+                  <p className="text-sm font-medium leading-none">john.doe@gmail.com</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    Welcome back!
+                  </p>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="hover:bg-accent/50">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="hover:bg-accent/50 text-destructive focus:text-destructive"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        {/* Main Layout with Sidebar */}
+        <div className="flex w-full">
+          <AppSidebar />
+          
+          {/* Main Content */}
+          <main className="flex-1 pt-20 px-4 py-8">
+            {/* Enhanced Filter Tabs */}
+            <div className="flex justify-center mb-12">
+              <div className="relative bg-background/60 backdrop-blur-md rounded-2xl p-2 border border-border/30 shadow-glow">
+                <div className="absolute inset-0 bg-gradient-hero opacity-10 rounded-2xl"></div>
+                <div className="relative flex">
+                  <Button
+                    variant={activeFilter === "recipes" ? "hero" : "ghost"}
+                    className={`relative px-10 py-4 rounded-xl font-semibold text-base transition-all duration-500 ${
+                      activeFilter === "recipes" 
+                        ? "bg-gradient-hero text-primary-foreground shadow-glow animate-bounce-in transform scale-105" 
+                        : "hover:bg-accent/30 hover:text-primary hover:scale-105"
+                    }`}
+                    onClick={() => setActiveFilter("recipes")}
                   >
-                    <div className="relative aspect-[4/3] overflow-hidden">
-                      <img
-                        src={recipe.image}
-                        alt={recipe.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors duration-300">
-                        {recipe.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm mt-2">
-                        Delicious and easy to make
-                      </p>
-                    </div>
+                    🍳 Recipes
+                  </Button>
+                  <Button
+                    variant={activeFilter === "beverages" ? "hero" : "ghost"}
+                    className={`relative px-10 py-4 rounded-xl font-semibold text-base transition-all duration-500 ${
+                      activeFilter === "beverages" 
+                        ? "bg-gradient-hero text-primary-foreground shadow-glow animate-bounce-in transform scale-105" 
+                        : "hover:bg-accent/30 hover:text-primary hover:scale-105"
+                    }`}
+                    onClick={() => setActiveFilter("beverages")}
+                  >
+                    🥤 Beverages
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Grid */}
+            <div className="max-w-6xl mx-auto">
+              {activeFilter === "recipes" && (
+                <div className="animate-fade-in">
+                  <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-hero bg-clip-text text-transparent">
+                    ✨ Featured Recipes
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {recipes.map((recipe, index) => (
+                    <div
+                      key={recipe.id}
+                      className="group bg-gradient-to-br from-background/95 to-background/80 backdrop-blur-md rounded-3xl overflow-hidden shadow-glow border border-border/20 hover:shadow-warm hover:border-primary/30 transition-all duration-700 hover:scale-[1.03] cursor-pointer animate-slide-in"
+                      style={{ animationDelay: `${index * 150}ms` }}
+                      onClick={() => handleRecipeClick(recipe)}
+                    >
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        <img
+                          src={recipe.image}
+                          alt={recipe.title}
+                          className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-1000"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm rounded-full px-3 py-1 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
+                          <span className="text-xs font-medium text-primary">{recipe.difficulty}</span>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 mb-2">
+                          {recipe.title}
+                        </h3>
+                        <p className="text-muted-foreground text-sm mb-3">
+                          Delicious and easy to make
+                        </p>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="flex items-center">
+                            ⏱️ {recipe.prepTime}
+                          </span>
+                          <span className="flex items-center">
+                            👥 {recipe.servings} servings
+                          </span>
+                        </div>
+                      </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {activeFilter === "beverages" && (
-            <div className="animate-fade-in">
-              <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-hero bg-clip-text text-transparent">
-                Refreshing Beverages
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {beverages.map((beverage) => (
-                  <div
-                    key={beverage.id}
-                    className="group bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-md rounded-2xl overflow-hidden shadow-elegant border border-border/30 hover:shadow-glow transition-all duration-500 hover:scale-[1.02] cursor-pointer"
-                  >
-                    <div className="relative aspect-[4/3] overflow-hidden">
-                      <img
-                        src={beverage.image}
-                        alt={beverage.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors duration-300">
-                        {beverage.title}
-                      </h3>
-                      <p className="text-muted-foreground text-sm mt-2">
-                        Perfect for any time of day
-                      </p>
-                    </div>
+              {activeFilter === "beverages" && (
+                <div className="animate-fade-in">
+                  <h2 className="text-4xl font-bold text-center mb-12 bg-gradient-hero bg-clip-text text-transparent">
+                    🥤 Refreshing Beverages
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {beverages.map((beverage, index) => (
+                    <div
+                      key={beverage.id}
+                      className="group bg-gradient-to-br from-background/95 to-background/80 backdrop-blur-md rounded-3xl overflow-hidden shadow-glow border border-border/20 hover:shadow-warm hover:border-primary/30 transition-all duration-700 hover:scale-[1.03] cursor-pointer animate-slide-in"
+                      style={{ animationDelay: `${index * 150}ms` }}
+                    >
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        <img
+                          src={beverage.image}
+                          alt={beverage.title}
+                          className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-1000"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 mb-2">
+                          {beverage.title}
+                        </h3>
+                        <p className="text-muted-foreground text-sm">
+                          Perfect for any time of day
+                        </p>
+                      </div>
                   </div>
-                ))}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </main>
         </div>
-      </main>
-      
-      <RecipeDetailModal
-        recipe={selectedRecipe}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
-    </div>
+        
+        <RecipeDetailModal
+          recipe={selectedRecipe}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      </div>
+    </SidebarProvider>
   );
 };
 
