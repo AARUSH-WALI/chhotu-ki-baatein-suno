@@ -6,11 +6,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Switch } from "@/components/ui/switch";
 import { Settings, LogOut, Sun, Moon } from "lucide-react";
 import cooksyLogo from "@/assets/cooksy-logo.png";
+import RecipeDetailModal from "@/components/RecipeDetailModal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState("recipes");
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleLogout = () => {
     navigate("/");
@@ -21,9 +24,169 @@ const Dashboard = () => {
     document.documentElement.classList.toggle("dark");
   };
 
+  const handleRecipeClick = (recipe) => {
+    setSelectedRecipe(recipe);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRecipe(null);
+  };
+
   const recipes = [
-    { id: 1, image: "https://images.unsplash.com/photo-1618160702438-9b02ab6515c9?w=300&h=200&fit=crop", title: "Delicious Pasta" },
-    { id: 2, image: "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=300&h=200&fit=crop", title: "Healthy Salad" }
+    {
+      id: 1,
+      image: "https://images.unsplash.com/photo-1563379091339-03246963d-5e94?w=400&h=300&fit=crop",
+      title: "Rajma Rice",
+      prepTime: "45 mins",
+      difficulty: "Medium" as const,
+      servings: 4,
+      ingredients: [
+        "1 cup rajma (kidney beans), soaked overnight",
+        "1 cup basmati rice",
+        "2 onions, chopped",
+        "3 tomatoes, chopped",
+        "4 garlic cloves, minced",
+        "1 inch ginger, grated",
+        "2 tsp cumin seeds",
+        "1 tsp turmeric powder",
+        "2 tsp red chili powder",
+        "1 tsp garam masala",
+        "Salt to taste",
+        "2 tbsp oil",
+        "Fresh coriander for garnish"
+      ],
+      tools: ["Pressure Cooker", "Pan", "Wooden Spoon", "Knife", "Cutting Board"],
+      process: [
+        "Soak rajma overnight and pressure cook for 15-20 minutes until soft.",
+        "Heat oil in a pan and add cumin seeds. Let them splutter.",
+        "Add chopped onions and sauté until golden brown.",
+        "Add ginger-garlic paste and cook for 2 minutes.",
+        "Add chopped tomatoes and cook until they become soft and mushy.",
+        "Add turmeric, red chili powder, and garam masala. Mix well.",
+        "Add cooked rajma with its water and simmer for 15 minutes.",
+        "Meanwhile, cook basmati rice separately.",
+        "Garnish rajma with fresh coriander and serve hot with rice."
+      ],
+      macros: { calories: 380, carbs: 65, protein: 18, fat: 8 }
+    },
+    {
+      id: 2,
+      image: "https://images.unsplash.com/photo-1563379091339-03246963d5e7?w=400&h=300&fit=crop",
+      title: "Chicken Biryani",
+      prepTime: "1.5 hours",
+      difficulty: "Hard" as const,
+      servings: 6,
+      ingredients: [
+        "500g basmati rice",
+        "750g chicken, cut into pieces",
+        "1 cup yogurt",
+        "2 onions, sliced",
+        "4 tbsp ghee",
+        "1 tsp saffron",
+        "1/4 cup warm milk",
+        "2 bay leaves",
+        "4-5 green cardamom",
+        "1 black cardamom",
+        "2 inch cinnamon stick",
+        "1 tsp ginger-garlic paste",
+        "1 tsp red chili powder",
+        "1/2 tsp turmeric powder",
+        "1 tsp biryani masala",
+        "Salt to taste",
+        "Fresh mint leaves",
+        "Fried onions for garnish"
+      ],
+      tools: ["Heavy-bottomed Pot", "Frying Pan", "Strainer", "Wooden Spoon"],
+      process: [
+        "Marinate chicken with yogurt, ginger-garlic paste, red chili powder, turmeric, and salt for 30 minutes.",
+        "Soak saffron in warm milk and set aside.",
+        "Fry sliced onions until golden brown and crispy. Set aside.",
+        "In the same oil, cook marinated chicken until 70% done.",
+        "Boil water with whole spices and salt. Add soaked rice and cook until 70% done.",
+        "Layer the partially cooked rice over chicken.",
+        "Sprinkle fried onions, mint leaves, and saffron milk on top.",
+        "Cover with aluminum foil, then place the lid.",
+        "Cook on high heat for 3-4 minutes, then reduce to low heat and cook for 45 minutes.",
+        "Let it rest for 10 minutes before opening. Gently mix and serve hot."
+      ],
+      macros: { calories: 520, carbs: 58, protein: 35, fat: 18 }
+    },
+    {
+      id: 3,
+      image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop",
+      title: "Chocolate Cake",
+      prepTime: "1 hour",
+      difficulty: "Medium" as const,
+      servings: 8,
+      ingredients: [
+        "2 cups all-purpose flour",
+        "2 cups sugar",
+        "3/4 cup cocoa powder",
+        "2 tsp baking soda",
+        "1 tsp baking powder",
+        "1 tsp salt",
+        "2 eggs",
+        "1 cup buttermilk",
+        "1 cup hot coffee",
+        "1/2 cup vegetable oil",
+        "1 tsp vanilla extract",
+        "For frosting: 200g dark chocolate, 200ml cream"
+      ],
+      tools: ["Electric Mixer", "Cake Pan", "Wire Rack", "Measuring Cups", "Spatula"],
+      process: [
+        "Preheat oven to 180°C. Grease and flour two 9-inch cake pans.",
+        "Mix all dry ingredients in a large bowl.",
+        "In another bowl, whisk together eggs, buttermilk, oil, and vanilla.",
+        "Combine wet and dry ingredients, then gradually add hot coffee.",
+        "Divide batter between prepared pans.",
+        "Bake for 30-35 minutes or until a toothpick comes out clean.",
+        "Cool in pans for 10 minutes, then turn out onto wire racks.",
+        "For frosting, heat cream and pour over chopped chocolate. Stir until smooth.",
+        "Once cakes are completely cool, frost and serve."
+      ],
+      macros: { calories: 450, carbs: 75, protein: 8, fat: 16 }
+    },
+    {
+      id: 4,
+      image: "https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=400&h=300&fit=crop",
+      title: "Pav Bhaji",
+      prepTime: "40 mins",
+      difficulty: "Easy" as const,
+      servings: 4,
+      ingredients: [
+        "4 potatoes, boiled and mashed",
+        "1 cup mixed vegetables (peas, carrots, beans)",
+        "2 onions, finely chopped",
+        "3 tomatoes, chopped",
+        "1 bell pepper, chopped",
+        "4 garlic cloves, minced",
+        "1 inch ginger, grated",
+        "3 tbsp pav bhaji masala",
+        "1 tsp red chili powder",
+        "1/2 tsp turmeric powder",
+        "4 tbsp butter",
+        "8 pav buns",
+        "Coriander leaves for garnish",
+        "Lemon wedges",
+        "Raw onions for serving"
+      ],
+      tools: ["Large Pan", "Potato Masher", "Ladle", "Knife", "Cutting Board"],
+      process: [
+        "Boil and mash all vegetables coarsely. Set aside.",
+        "Heat butter in a large pan and sauté onions until translucent.",
+        "Add ginger-garlic paste and cook for 2 minutes.",
+        "Add chopped tomatoes and bell pepper. Cook until soft.",
+        "Add pav bhaji masala, red chili powder, and turmeric. Mix well.",
+        "Add mashed vegetables and mix thoroughly.",
+        "Add water as needed to achieve desired consistency.",
+        "Simmer for 10-15 minutes, mashing occasionally.",
+        "Heat pav buns with butter on a griddle.",
+        "Serve hot bhaji with buttered pav, raw onions, and lemon wedges."
+      ],
+      macros: { calories: 320, carbs: 52, protein: 8, fat: 12 }
+    }
   ];
 
   const beverages = [
@@ -137,6 +300,7 @@ const Dashboard = () => {
                   <div
                     key={recipe.id}
                     className="group bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-md rounded-2xl overflow-hidden shadow-elegant border border-border/30 hover:shadow-glow transition-all duration-500 hover:scale-[1.02] cursor-pointer"
+                    onClick={() => handleRecipeClick(recipe)}
                   >
                     <div className="relative aspect-[4/3] overflow-hidden">
                       <img
@@ -194,6 +358,12 @@ const Dashboard = () => {
           )}
         </div>
       </main>
+      
+      <RecipeDetailModal
+        recipe={selectedRecipe}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };
