@@ -95,24 +95,38 @@ const Chat = () => {
     }
   };
 
-  const simulateAIResponse = (userMessage: string): string => {
-    const responses = [
-      "I'd be happy to help you with that recipe! Here are some suggestions based on your request...",
-      "That sounds delicious! Let me break down the cooking process step by step for you.",
-      "Great choice! Here's what I recommend for the perfect flavor combination...",
-      "I can definitely help you with that. Here are some tips to make it even better...",
-      "That's an interesting cooking question! Based on culinary science, here's what I suggest...",
-    ];
-    
-    if (userMessage.toLowerCase().includes("recipe")) {
-      return "I'd love to help you find the perfect recipe! What type of cuisine or ingredients are you interested in? I can suggest something delicious based on your preferences.";
+  const getGeminiResponse = async (userMessage: string): Promise<string> => {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyAm_YRy8fPqM9A3NJmSLgFqrr3FVQzVGkY`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are Cooksy AI, a helpful cooking assistant. You specialize in recipes, cooking tips, meal planning, nutrition advice, and all things food-related. Please provide helpful, accurate, and engaging responses about cooking and food. User question: ${userMessage}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from Gemini API');
+      }
+
+      const data = await response.json();
+      return data.candidates[0]?.content?.parts[0]?.text || "I'm sorry, I couldn't generate a response. Please try again.";
+    } catch (error) {
+      console.error('Error calling Gemini API:', error);
+      return "I'm having trouble connecting right now. Please try again in a moment.";
     }
-    
-    if (userMessage.toLowerCase().includes("ingredient")) {
-      return "Great question about ingredients! The key is understanding how different ingredients work together. What specific ingredients are you working with?";
-    }
-    
-    return responses[Math.floor(Math.random() * responses.length)];
   };
 
   const handleSendMessage = async () => {
@@ -129,17 +143,28 @@ const Chat = () => {
     setInputMessage("");
     setIsLoading(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
+    // Get AI response from Gemini
+    try {
+      const aiResponseContent = await getGeminiResponse(inputMessage);
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: simulateAIResponse(inputMessage),
+        content: aiResponseContent,
         isUser: false,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "I'm sorry, I encountered an error. Please try again.",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsLoading(false);
-    }, 1000 + Math.random() * 2000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
