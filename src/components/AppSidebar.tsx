@@ -65,8 +65,10 @@ export function AppSidebar() {
             } py-3 bg-gradient-hero text-primary-foreground hover:shadow-glow transition-all duration-300 animate-glow-pulse`}
             onClick={menuItems[0].action}
           >
-            <MessageSquare className={`h-5 w-5 ${collapsed ? "" : "mr-3"}`} />
-            {!collapsed && <span className="font-medium">New Chat</span>}
+            <div className="flex items-center">
+              <MessageSquare className={`h-5 w-5 ${collapsed ? "" : "mr-3"}`} />
+              {!collapsed && <span className="font-medium">New Chat</span>}
+            </div>
           </Button>
         </div>
 
