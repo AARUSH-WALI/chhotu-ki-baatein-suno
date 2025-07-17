@@ -98,14 +98,16 @@ export function AppSidebar() {
                     style={{ animationDelay: `${index * 100}ms` }}
                     onClick={item.action}
                   >
-                    <item.icon className={`h-4 w-4 ${
-                      collapsed ? "" : "mr-3"
-                    } group-hover:text-primary transition-colors duration-200`} />
-                    {!collapsed && (
-                      <span className="text-sm font-medium group-hover:text-sidebar-accent-foreground">
-                        {item.title}
-                      </span>
-                    )}
+                    <div className="flex items-center">
+                      <item.icon className={`h-4 w-4 ${
+                        collapsed ? "" : "mr-3"
+                      } group-hover:text-primary transition-colors duration-200`} />
+                      {!collapsed && (
+                        <span className="text-sm font-medium group-hover:text-sidebar-accent-foreground">
+                          {item.title}
+                        </span>
+                      )}
+                    </div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -120,8 +122,10 @@ export function AppSidebar() {
               variant="outline"
               className="w-full py-3 border-sidebar-border hover:bg-sidebar-accent hover:border-primary transition-all duration-300 group"
             >
-              <Plus className="h-4 w-4 mr-3 group-hover:text-primary transition-colors duration-200" />
-              <span className="text-sm font-medium">Add Recipe</span>
+              <div className="flex items-center">
+                <Plus className="h-4 w-4 mr-3 group-hover:text-primary transition-colors duration-200" />
+                <span className="text-sm font-medium">Add Recipe</span>
+              </div>
             </Button>
           </div>
         )}
