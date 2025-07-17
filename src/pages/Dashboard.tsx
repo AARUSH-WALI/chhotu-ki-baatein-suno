@@ -203,14 +203,8 @@ const Dashboard = () => {
         <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-background/95 backdrop-blur-md border-b border-border/50">
           {/* Left Section with Sidebar Toggle and Logo */}
           <div className="flex items-center space-x-4">
-            <SidebarTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hover:bg-accent/50 hover:text-primary transition-all duration-200"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
+            <SidebarTrigger className="hover:bg-accent/50 hover:text-primary transition-all duration-200 p-2 rounded-md">
+              <Menu className="h-5 w-5" />
             </SidebarTrigger>
             <div className="flex items-center space-x-3">
               <img 
