@@ -1,4 +1,5 @@
-import { MessageSquare, BookOpen, Heart, Save, User, Plus, ChefHat } from "lucide-react";
+import { MessageSquare, BookOpen, Heart, Save, User, Plus, ChefHat, Home } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -15,12 +16,19 @@ import { Button } from "@/components/ui/button";
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const navigate = useNavigate();
 
-  const menuItems = [
+  const mainMenuItems = [
+    {
+      title: "Dashboard",
+      icon: Home,
+      action: () => navigate("/dashboard"),
+      variant: "outline" as const
+    },
     {
       title: "New Chat",
       icon: MessageSquare,
-      action: () => console.log("New chat"),
+      action: () => navigate("/chat"),
       variant: "hero" as const
     }
   ];
@@ -56,20 +64,23 @@ export function AppSidebar() {
       collapsible="icon"
     >
       <SidebarContent className="px-3 py-4">
-        {/* New Chat Button */}
-        <div className="mb-6">
-          <Button
-            variant="hero"
-            className={`w-full ${
-              collapsed ? "px-3" : "px-4"
-            } py-3 bg-gradient-hero text-primary-foreground hover:shadow-glow transition-all duration-300 animate-glow-pulse`}
-            onClick={menuItems[0].action}
-          >
-            <div className="flex items-center">
-              <MessageSquare className={`h-5 w-5 ${collapsed ? "" : "mr-3"}`} />
-              {!collapsed && <span className="font-medium">New Chat</span>}
-            </div>
-          </Button>
+        {/* Main Menu Buttons */}
+        <div className="mb-6 space-y-3">
+          {mainMenuItems.map((item, index) => (
+            <Button
+              key={item.title}
+              variant={item.variant}
+              className={`w-full ${
+                collapsed ? "px-3" : "px-4"
+              } py-3 ${item.variant === "hero" ? "bg-gradient-hero text-primary-foreground hover:shadow-glow animate-glow-pulse" : "hover:bg-accent hover:text-accent-foreground"} transition-all duration-300`}
+              onClick={item.action}
+            >
+              <div className="flex items-center">
+                <item.icon className={`h-5 w-5 ${collapsed ? "" : "mr-3"}`} />
+                {!collapsed && <span className="font-medium">{item.title}</span>}
+              </div>
+            </Button>
+          ))}
         </div>
 
         {/* CookSy Book Section */}
