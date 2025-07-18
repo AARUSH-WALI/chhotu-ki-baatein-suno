@@ -65,7 +65,7 @@ export function AppSidebar() {
     >
       <SidebarContent className="px-3 py-4">
         {/* Main Menu Buttons */}
-        <div className="mb-6 space-y-3">
+        <div className="mb-6 space-y-3 mt-8">
           {mainMenuItems.map((item, index) => (
             <Button
               key={item.title}

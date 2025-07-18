@@ -97,7 +97,7 @@ const Chat = () => {
 
   const getGeminiResponse = async (userMessage: string): Promise<string> => {
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyAm_YRy8fPqM9A3NJmSLgFqrr3FVQzVGkY`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyDhUzf3y6JkGexIbmY_jwhpTu6BA3FbDYs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
