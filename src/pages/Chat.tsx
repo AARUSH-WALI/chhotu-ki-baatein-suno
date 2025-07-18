@@ -172,14 +172,28 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response from Gemini API');
+        const errorData = await response.json().catch(() => null);
+        
+        if (response.status === 503) {
+          return "🔄 The AI service is currently experiencing high demand. Please try again in a few moments, or feel free to ask me another cooking question!";
+        } else if (response.status === 429) {
+          return "⏱️ We've hit the rate limit. Please wait a moment before sending another message.";
+        } else if (response.status === 400) {
+          return "❌ There was an issue with your request. Please try rephrasing your question.";
+        } else {
+          console.error('API Error:', errorData);
+          return "🔧 I'm experiencing technical difficulties. Please try again in a moment, and I'll do my best to help with your cooking questions!";
+        }
       }
 
       const data = await response.json();
-      return data.candidates[0]?.content?.parts[0]?.text || "I'm sorry, I couldn't generate a response. Please try again.";
+      return data.candidates[0]?.content?.parts[0]?.text || "I'm sorry, I couldn't generate a response. Please try asking your cooking question again.";
     } catch (error) {
       console.error('Error calling Gemini API:', error);
-      return "I'm having trouble connecting right now. Please try again in a moment.";
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return "🌐 Unable to connect to the AI service. Please check your internet connection and try again.";
+      }
+      return "🤖 I'm having trouble processing your request right now. Please try again in a moment, and I'll be happy to help with your cooking questions!";
     }
   };
 
