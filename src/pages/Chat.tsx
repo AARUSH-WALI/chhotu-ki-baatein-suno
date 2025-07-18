@@ -97,6 +97,40 @@ const Chat = () => {
 
   const getGeminiResponse = async (userMessage: string): Promise<string> => {
     try {
+      // Build conversation context from recent messages
+      const recentMessages = messages.slice(-6); // Last 6 messages for context
+      const conversationContext = recentMessages
+        .map(msg => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+
+      const enhancedPrompt = `You are Cooksy AI, an expert culinary assistant and professional chef with extensive knowledge in:
+
+🍳 COOKING EXPERTISE:
+- International cuisines and traditional recipes
+- Advanced cooking techniques and food science
+- Ingredient substitutions and dietary adaptations
+- Kitchen equipment recommendations and usage
+- Food safety and proper storage methods
+- Meal planning and nutrition optimization
+- Baking science and pastry techniques
+- Wine pairing and beverage recommendations
+
+🎯 RESPONSE STYLE:
+- Provide step-by-step instructions with precise measurements
+- Include cooking times, temperatures, and techniques
+- Suggest ingredient alternatives for dietary restrictions
+- Offer helpful tips and pro chef secrets
+- Be encouraging and enthusiastic about cooking
+- Format recipes clearly with ingredients and instructions
+- Include nutritional benefits when relevant
+
+📝 CONVERSATION CONTEXT:
+${conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : ''}
+
+Current question: ${userMessage}
+
+Please provide a detailed, helpful, and engaging response focused on cooking and culinary arts.`;
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyDhUzf3y6JkGexIbmY_jwhpTu6BA3FbDYs`, {
         method: 'POST',
         headers: {
@@ -105,15 +139,35 @@ const Chat = () => {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `You are Cooksy AI, a helpful cooking assistant. You specialize in recipes, cooking tips, meal planning, nutrition advice, and all things food-related. Please provide helpful, accurate, and engaging responses about cooking and food. User question: ${userMessage}`
+              text: enhancedPrompt
             }]
           }],
           generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          }
+            temperature: 0.8, // Slightly higher for more creative cooking suggestions
+            topK: 50, // Increased for more diverse vocabulary
+            topP: 0.9, // Balanced for coherent yet creative responses
+            maxOutputTokens: 2048, // Increased for detailed recipes and instructions
+            candidateCount: 1,
+            stopSequences: ["User:", "Assistant:"]
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH", 
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
         }),
       });
 
