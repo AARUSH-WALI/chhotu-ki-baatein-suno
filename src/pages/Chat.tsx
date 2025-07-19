@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Settings, LogOut, Sun, Moon, Menu, Send, Mic, MicOff, Sparkles, ChefHat, Coffee } from "lucide-react";
+import { Settings, LogOut, Sun, Moon, Menu, Send, Mic, MicOff, Sparkles, ChefHat, Coffee, Volume2, VolumeX } from "lucide-react";
 import cooksyLogo from "@/assets/cooksy-logo.png";
 import { AppSidebar } from "@/components/AppSidebar";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -20,11 +21,12 @@ interface Message {
 
 const Chat = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm your AI cooking assistant. I can help you with recipes, cooking tips, meal planning, and answer any culinary questions you might have. What would you like to cook today?",
+      content: "Hello! I'm Cooksy, your AI cooking assistant. I can help you with recipes, cooking tips, meal planning, and answer any culinary questions you might have. What would you like to cook today?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -32,8 +34,21 @@ const Chat = () => {
   const [inputMessage, setInputMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isListeningForWakeWord, setIsListeningForWakeWord] = useState(false);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentRecipeStep, setCurrentRecipeStep] = useState(0);
+  const [isInRecipeMode, setIsInRecipeMode] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const wakeWordRecognitionRef = useRef<any>(null);
+  const speechTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const conversationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const ELEVENLABS_API_KEY = 'sk_a122ad6a61bc931bcd2c6852f464e479be87d7c88cb31d9f';
+  const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah voice
 
   const handleLogout = () => {
     navigate("/");
@@ -52,12 +67,97 @@ const Chat = () => {
     scrollToBottom();
   }, [messages]);
 
+  const isCookingRelated = (message: string): boolean => {
+    const cookingKeywords = [
+      'recipe', 'cook', 'cooking', 'kitchen', 'ingredient', 'food', 'dish', 'meal',
+      'bake', 'baking', 'fry', 'boil', 'roast', 'grill', 'steam', 'sauté',
+      'spice', 'seasoning', 'flavor', 'taste', 'chef', 'cuisine', 'menu',
+      'breakfast', 'lunch', 'dinner', 'snack', 'appetizer', 'dessert',
+      'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'protein', 'carbs',
+      'nutrition', 'calories', 'healthy', 'diet', 'eat', 'eating', 'prepare'
+    ];
+    
+    return cookingKeywords.some(keyword => 
+      message.toLowerCase().includes(keyword)
+    );
+  };
+
+  const speakText = async (text: string) => {
+    try {
+      setIsSpeaking(true);
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': ELEVENLABS_API_KEY
+        },
+        body: JSON.stringify({
+          text: text,
+          model_id: 'eleven_turbo_v2_5',
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.8,
+            style: 0.0,
+            use_speaker_boost: true
+          }
+        })
+      });
+
+      if (response.ok) {
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+          
+          // Add conversation delay and then listen for next input
+          if (isVoiceMode) {
+            conversationTimeoutRef.current = setTimeout(() => {
+              if (!isRecording && isVoiceMode && !isSpeaking) {
+                setIsRecording(true);
+                if (recognitionRef.current) {
+                  recognitionRef.current.start();
+                }
+              }
+            }, 2500);
+          }
+        };
+        
+        await audio.play();
+      } else {
+        throw new Error('Failed to generate speech');
+      }
+    } catch (error) {
+      console.error('Error generating speech:', error);
+      setIsSpeaking(false);
+      toast({
+        title: "Voice Error",
+        description: "Failed to generate voice response. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopSpeaking = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsSpeaking(false);
+    }
+  };
+
   // Initialize speech recognition
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+      
+      // Main speech recognition
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
+      recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
 
@@ -67,36 +167,177 @@ const Chat = () => {
           .map((result: any) => result.transcript)
           .join('');
 
+        // Clear existing timeout
+        if (speechTimeoutRef.current) {
+          clearTimeout(speechTimeoutRef.current);
+        }
+
+        // Set timeout to stop recording after 2-3 seconds of silence
+        speechTimeoutRef.current = setTimeout(() => {
+          if (recognitionRef.current && isRecording) {
+            recognitionRef.current.stop();
+          }
+        }, 2500);
+
         setInputMessage(transcript);
+        
+        if (event.results[event.results.length - 1].isFinal) {
+          setIsRecording(false);
+          if (isVoiceMode && transcript.trim()) {
+            handleSendMessage(transcript.trim());
+          }
+        }
       };
 
       recognitionRef.current.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         setIsRecording(false);
+        if (speechTimeoutRef.current) {
+          clearTimeout(speechTimeoutRef.current);
+        }
       };
 
       recognitionRef.current.onend = () => {
         setIsRecording(false);
+        if (speechTimeoutRef.current) {
+          clearTimeout(speechTimeoutRef.current);
+        }
+      };
+
+      // Wake word recognition
+      wakeWordRecognitionRef.current = new SpeechRecognition();
+      wakeWordRecognitionRef.current.continuous = true;
+      wakeWordRecognitionRef.current.interimResults = false;
+      wakeWordRecognitionRef.current.lang = 'en-US';
+
+      wakeWordRecognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        console.log('Wake word listening:', transcript);
+        
+        if (transcript.includes('cooksy') || transcript.includes('cookie')) {
+          console.log('Wake word detected!');
+          if (isSpeaking) {
+            stopSpeaking();
+          }
+          setIsRecording(true);
+          if (recognitionRef.current) {
+            recognitionRef.current.start();
+          }
+          toast({
+            title: "Wake word detected!",
+            description: "I'm listening... How can I help you cook today?",
+          });
+        }
+      };
+
+      wakeWordRecognitionRef.current.onerror = (event: any) => {
+        console.error('Wake word recognition error:', event.error);
+        if (isListeningForWakeWord) {
+          setTimeout(() => {
+            if (wakeWordRecognitionRef.current && isListeningForWakeWord) {
+              try {
+                wakeWordRecognitionRef.current.start();
+              } catch (error) {
+                console.error('Error restarting wake word recognition:', error);
+              }
+            }
+          }, 1000);
+        }
+      };
+
+      wakeWordRecognitionRef.current.onend = () => {
+        if (isListeningForWakeWord) {
+          setTimeout(() => {
+            if (wakeWordRecognitionRef.current && isListeningForWakeWord) {
+              try {
+                wakeWordRecognitionRef.current.start();
+              } catch (error) {
+                console.error('Error restarting wake word recognition:', error);
+              }
+            }
+          }, 100);
+        }
       };
     }
-  }, []);
+
+    return () => {
+      if (speechTimeoutRef.current) {
+        clearTimeout(speechTimeoutRef.current);
+      }
+      if (conversationTimeoutRef.current) {
+        clearTimeout(conversationTimeoutRef.current);
+      }
+    };
+  }, [isRecording, isVoiceMode, isListeningForWakeWord, isSpeaking]);
 
   const startRecording = () => {
-    if (recognitionRef.current) {
+    if (recognitionRef.current && !isRecording) {
       setIsRecording(true);
       recognitionRef.current.start();
     }
   };
 
   const stopRecording = () => {
-    if (recognitionRef.current) {
+    if (recognitionRef.current && isRecording) {
       setIsRecording(false);
       recognitionRef.current.stop();
     }
   };
 
+  const startWakeWordListening = () => {
+    if (wakeWordRecognitionRef.current && !isListeningForWakeWord) {
+      setIsListeningForWakeWord(true);
+      try {
+        wakeWordRecognitionRef.current.start();
+        toast({
+          title: "Wake word activated",
+          description: "Say 'Cooksy' to start voice conversation",
+        });
+      } catch (error) {
+        console.error('Error starting wake word recognition:', error);
+        setIsListeningForWakeWord(false);
+      }
+    }
+  };
+
+  const stopWakeWordListening = () => {
+    if (wakeWordRecognitionRef.current && isListeningForWakeWord) {
+      setIsListeningForWakeWord(false);
+      try {
+        wakeWordRecognitionRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping wake word recognition:', error);
+      }
+    }
+  };
+
+  const toggleVoiceMode = () => {
+    if (isVoiceMode) {
+      setIsVoiceMode(false);
+      stopWakeWordListening();
+      if (isSpeaking) {
+        stopSpeaking();
+      }
+      if (isRecording) {
+        stopRecording();
+      }
+      toast({
+        title: "Voice mode disabled",
+        description: "Voice conversation mode is now off",
+      });
+    } else {
+      setIsVoiceMode(true);
+      startWakeWordListening();
+    }
+  };
+
   const getGeminiResponse = async (userMessage: string): Promise<string> => {
     try {
+      // Check if the message is cooking-related
+      if (!isCookingRelated(userMessage)) {
+        return "I'm Cooksy, your cooking assistant! I'm here to help you with recipes, cooking techniques, meal planning, and kitchen tips. Could you ask me something related to cooking or food?";
+      }
+
       // Build conversation context from recent messages
       const recentMessages = messages.slice(-6); // Last 6 messages for context
       const conversationContext = recentMessages
@@ -123,6 +364,9 @@ const Chat = () => {
 - Be encouraging and enthusiastic about cooking
 - Format recipes clearly with ingredients and instructions
 - Include nutritional benefits when relevant
+${isVoiceMode ? `- Keep responses conversational and suitable for voice interaction
+- For step-by-step recipes, number each step clearly and keep steps concise
+- End with questions like "Ready for the next step?" or "Any questions about this step?"` : ''}
 
 📝 CONVERSATION CONTEXT:
 ${conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : ''}
@@ -143,10 +387,10 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
             }]
           }],
           generationConfig: {
-            temperature: 0.8, // Slightly higher for more creative cooking suggestions
-            topK: 50, // Increased for more diverse vocabulary
-            topP: 0.9, // Balanced for coherent yet creative responses
-            maxOutputTokens: 2048, // Increased for detailed recipes and instructions
+            temperature: 0.8,
+            topK: 50,
+            topP: 0.9,
+            maxOutputTokens: 2048,
             candidateCount: 1,
             stopSequences: ["User:", "Assistant:"]
           },
@@ -197,12 +441,13 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = async (messageText?: string) => {
+    const messageToSend = messageText || inputMessage.trim();
+    if (!messageToSend) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputMessage,
+      content: messageToSend,
       isUser: true,
       timestamp: new Date(),
     };
@@ -213,7 +458,7 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
 
     // Get AI response from Gemini
     try {
-      const aiResponseContent = await getGeminiResponse(inputMessage);
+      const aiResponseContent = await getGeminiResponse(messageToSend);
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         content: aiResponseContent,
@@ -221,6 +466,11 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, aiResponse]);
+
+      // If in voice mode, speak the response
+      if (isVoiceMode) {
+        await speakText(aiResponseContent);
+      }
     } catch (error) {
       console.error('Error getting AI response:', error);
       const errorResponse: Message = {
@@ -328,6 +578,23 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
           
           {/* Chat Interface */}
           <main className="flex-1 pt-20 flex flex-col h-screen">
+            {/* Voice Mode Status */}
+            {isVoiceMode && (
+              <div className="px-6 py-2 bg-gradient-hero/10 border-b border-border/50">
+                <div className="flex items-center justify-center space-x-2 text-sm">
+                  <Volume2 className="w-4 h-4 text-primary" />
+                  <span className="text-primary font-medium">
+                    {isListeningForWakeWord ? "Say 'Cooksy' to start" : 
+                     isRecording ? "Listening..." : 
+                     isSpeaking ? "Speaking..." : "Voice mode active"}
+                  </span>
+                  {(isRecording || isSpeaking) && (
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4">
               
               {/* Messages Container */}
@@ -399,7 +666,30 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
               {/* Suggested Prompts (only show when no messages or just welcome message) */}
               {messages.length <= 1 && (
                 <div className="py-4">
-                  <p className="text-center text-muted-foreground mb-4 text-sm">Try asking me about:</p>
+                  <div className="text-center mb-6">
+                    <h2 className="text-lg font-semibold mb-2">Welcome to Voice Mode!</h2>
+                    <p className="text-muted-foreground mb-4 text-sm">Try asking me about cooking, or enable voice mode below:</p>
+                    
+                    {/* Voice Mode Toggle */}
+                    <div className="mb-6">
+                      <Button
+                        onClick={toggleVoiceMode}
+                        variant={isVoiceMode ? "default" : "outline"}
+                        className="mb-2"
+                        size="lg"
+                      >
+                        {isVoiceMode ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
+                        {isVoiceMode ? "Disable Voice Mode" : "Enable Voice Mode"}
+                      </Button>
+                      {isVoiceMode && (
+                        <p className="text-xs text-muted-foreground">
+                          Say "Cooksy" to start voice conversation
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="text-center text-muted-foreground mb-4 text-sm">Or try asking me about:</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {suggestedPrompts.map((prompt, index) => (
                       <Button
@@ -424,35 +714,48 @@ Please provide a detailed, helpful, and engaging response focused on cooking and
                       value={inputMessage}
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="Ask me anything about cooking, recipes, or food..."
-                      className="pr-12 min-h-[48px] bg-background/80 border-border/30 focus:border-primary/50 focus:ring-primary/20 resize-none rounded-xl"
+                      placeholder={isVoiceMode ? "Voice mode active - say 'Cooksy' or type here..." : "Ask me about cooking, recipes, or food..."}
+                      className="bg-background/80 border-border/30 focus:border-primary/50 transition-all duration-300 min-h-[48px] text-base"
                       disabled={isLoading}
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`absolute right-2 top-1/2 transform -translate-y-1/2 ${
-                        isRecording ? "text-destructive hover:text-destructive" : "text-muted-foreground hover:text-primary"
-                      }`}
-                      onClick={isRecording ? stopRecording : startRecording}
-                      disabled={isLoading}
-                    >
-                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    </Button>
                   </div>
+                  
+                  {/* Voice Mode Toggle Button */}
                   <Button
-                    onClick={handleSendMessage}
-                    disabled={!inputMessage.trim() || isLoading}
-                    className="min-h-[48px] px-6 bg-gradient-hero hover:shadow-glow transition-all duration-300"
+                    onClick={toggleVoiceMode}
+                    variant={isVoiceMode ? "default" : "outline"}
+                    size="lg"
+                    className="px-3"
+                    title={isVoiceMode ? "Disable Voice Mode" : "Enable Voice Mode"}
                   >
-                    <Send className="h-4 w-4" />
+                    {isVoiceMode ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  </Button>
+                  
+                  {/* Manual Voice Input Button */}
+                  <Button
+                    onClick={startRecording}
+                    disabled={isRecording || isLoading}
+                    variant={isRecording ? "default" : "outline"}
+                    size="lg"
+                    className="px-3"
+                    title="Voice Input"
+                  >
+                    {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </Button>
+                  
+                  <Button
+                    onClick={() => handleSendMessage()}
+                    disabled={!inputMessage.trim() || isLoading}
+                    size="lg"
+                    className="px-6 bg-gradient-hero hover:shadow-glow transition-all duration-300"
+                  >
+                    {isLoading ? (
+                      <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
                   </Button>
                 </div>
-                {isRecording && (
-                  <div className="text-center mt-2">
-                    <span className="text-sm text-destructive animate-pulse">🎤 Recording... Speak now</span>
-                  </div>
-                )}
               </div>
             </div>
           </main>
